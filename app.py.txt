@@ -1,0 +1,67 @@
+import streamlit as st
+import cv2
+from PIL import Image
+import numpy as np
+import time
+
+# 网页标题和中文设置
+st.set_page_config(page_title="Nano Banana 视频拆解助手", layout="wide")
+
+st.title("🎬 Nano Banana 视频镜头 AI 抽帧工具")
+st.markdown("---")
+
+# 侧边栏：设置
+st.sidebar.header("⚙️ 参数设置")
+sampling_rate = st.sidebar.slider("抽帧频率（每秒几帧）", 0.5, 5.0, 1.0)
+api_key = st.sidebar.text_input("输入你的 Nano Banana API 密钥", type="password")
+
+# 上传视频
+uploaded_file = st.file_uploader("请上传 MP4 或 MOV 格式视频", type=["mp4", "mov"])
+
+if uploaded_file is not None:
+    # 临时保存视频以便处理
+    with open("input_video.mp4", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    
+    st.video(uploaded_file)
+
+    if st.button("🚀 开始逐帧拆解并生成 AI 提示词"):
+        if not api_key:
+            st.error("请先在左侧输入 API 密钥！")
+        else:
+            video = cv2.VideoCapture("input_video.mp4")
+            fps = video.get(cv2.CAP_PROP_FPS)
+            step = int(fps / sampling_rate)
+            
+            count = 0
+            frame_idx = 0
+            
+            st.subheader("📝 镜头拆解结果")
+            
+            while video.isOpened():
+                ret, frame = video.read()
+                if not ret:
+                    break
+                
+                if count % step == 0:
+                    frame_idx += 1
+                    # 转换图片格式
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    img = Image.fromarray(frame_rgb)
+                    
+                    # 界面布局
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        st.image(img, caption=f"镜头 {frame_idx}")
+                    with col2:
+                        # 这里模拟调用 Nano Banana API
+                        # 实际部署时，我会帮你接入真实的 requests 请求
+                        st.info(f"正在分析第 {frame_idx} 个镜头...")
+                        placeholder_prompt = f"Cinematic, high resolution, masterpiece, lighting focus, frame_{frame_idx}"
+                        st.text_area(f"AI 提示词 {frame_idx}", value=placeholder_prompt, height=100)
+                        st.button(f"复制提示词", key=f"btn_{frame_idx}")
+                    st.markdown("---")
+                
+                count += 1
+            video.release()
+            st.success("分析完成！")
