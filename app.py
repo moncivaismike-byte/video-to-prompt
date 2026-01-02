@@ -18,22 +18,23 @@ with st.sidebar:
 
 # 核心：处理视频链接的函数
 def download_video(url):
- ydl_opts = {
-    'format': 'best',
-    'quiet': True,
-    'no_warnings': True,
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'outtmpl': 'downloaded_video.mp4',
-}
+    ydl_opts = {
+        'format': 'mp4/best',
+        'quiet': True,
+        'no_warnings': True,
+        # 模拟浏览器真实访问，避开平台检测
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'outtmpl': 'downloaded_video.mp4',
+        # 增加对重定向和长链接的处理
+        'referer': 'https://www.douyin.com/',
+        'extract_flat': True,
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
     return 'downloaded_video.mp4'
-
 # 界面选择：上传文件或输入链接
 option = st.radio("选择输入方式", ("输入视频链接", "上传视频文件"))
-
 video_path = None
-
 if option == "输入视频链接":
     url = st.text_input("请粘贴视频网址 (支持抖音/B站/YouTube等)")
     if url:
@@ -58,4 +59,5 @@ if video_path and api_key:
         fps = cap.get(cv2.CAP_PROP_FPS)
         # ... 后续调用灵光API的逻辑与之前一致 ...
         st.info("正在调用灵光API进行深度分析...")
+
 
