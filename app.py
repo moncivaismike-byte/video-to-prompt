@@ -1,68 +1,68 @@
 import streamlit as st
 import cv2
 from PIL import Image
-import numpy as np
-import time
+import requests
+import base64
+import io
 
-# 网页标题和中文设置
-st.set_page_config(page_title="Nano Banana 视频拆解助手", layout="wide")
+st.set_page_config(page_title="Nano Banana 视频解析", layout="wide")
 
 st.title("🎬 Nano Banana 视频镜头 AI 抽帧工具")
-st.markdown("---")
 
-# 侧边栏：设置
-st.sidebar.header("⚙️ 参数设置")
-sampling_rate = st.sidebar.slider("抽帧频率（每秒几帧）", 0.5, 5.0, 1.0)
-api_key = st.sidebar.text_input("输入你的 Nano Banana API 密钥", type="password")
+# 侧边栏：配置
+with st.sidebar:
+    st.header("⚙️ 设置")
+    api_key = st.text_input("输入 Nano Banana API Key", type="password")
+    gap = st.slider("抽帧频率 (每秒几帧)", 0.5, 5.0, 1.0)
 
-# 上传视频
-uploaded_file = st.file_uploader("请上传 MP4 或 MOV 格式视频", type=["mp4", "mov"])
+file = st.file_uploader("上传视频 (MP4/MOV)", type=["mp4", "mov"])
 
-if uploaded_file is not None:
-    # 临时保存视频以便处理
-    with open("input_video.mp4", "wb") as f:
-        f.write(uploaded_file.getbuffer())
+def analyze_frame(image, key):
+    # 这里是调用 Nano Banana 接口的标准逻辑
+    # 注意：实际 URL 请替换为 Nano Banana 官方提供的 Endpoint
+    api_url = "https://api.nanobanana.com/v1/vision" 
     
-    st.video(uploaded_file)
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    payload = {
+        "model": "nano-banana-vision",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请详细描述此画面，并生成一段高质量的 AI 绘图提示词 (Prompt)"},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
+            ]
+        }]
+    }
+    try:
+        response = requests.post(api_url, json=payload, headers=headers)
+        return response.json()['choices'][0]['message']['content']
+    except:
+        return "API 调用失败，请检查 Key 或网络。"
 
-    if st.button("🚀 开始逐帧拆解并生成 AI 提示词"):
-        if not api_key:
-            st.error("请先在左侧输入 API 密钥！")
-        else:
-            video = cv2.VideoCapture("input_video.mp4")
-            fps = video.get(cv2.CAP_PROP_FPS)
-            step = int(fps / sampling_rate)
-            
-            count = 0
-            frame_idx = 0
-            
-            st.subheader("📝 镜头拆解结果")
-            
-            while video.isOpened():
-                ret, frame = video.read()
-                if not ret:
-                    break
-                
-                if count % step == 0:
-                    frame_idx += 1
-                    # 转换图片格式
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    img = Image.fromarray(frame_rgb)
-                    
-                    # 界面布局
-                    col1, col2 = st.columns([1, 2])
-                    with col1:
-                        st.image(img, caption=f"镜头 {frame_idx}")
-                    with col2:
-                        # 这里模拟调用 Nano Banana API
-                        # 实际部署时，我会帮你接入真实的 requests 请求
-                        st.info(f"正在分析第 {frame_idx} 个镜头...")
-                        placeholder_prompt = f"Cinematic, high resolution, masterpiece, lighting focus, frame_{frame_idx}"
-                        st.text_area(f"AI 提示词 {frame_idx}", value=placeholder_prompt, height=100)
-                        st.button(f"复制提示词", key=f"btn_{frame_idx}")
-                    st.markdown("---")
-                
-                count += 1
-            video.release()
-
-            st.success("分析完成！")
+if file and api_key:
+    with open("temp.mp4", "wb") as f:
+        f.write(file.read())
+    
+    cap = cv2.VideoCapture("temp.mp4")
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    
+    if st.button("🚀 开始 AI 拆解分析"):
+        count = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret: break
+            if count % int(fps / gap) == 0:
+                img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                col1, col2 = st.columns([1, 2])
+                with col1: st.image(img)
+                with col2:
+                    result = analyze_frame(img, api_key)
+                    st.write("**AI 解析结果：**")
+                    st.info(result)
+                st.divider()
+            count += 1
+        cap.release()
