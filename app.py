@@ -143,3 +143,31 @@ if file and api_key:
         cap.release()
 elif file and not api_key:
     st.warning("请在左侧填入你的灵光API令牌。")
+import streamlit as st
+import requests
+import cv2
+from PIL import Image
+import io
+import base64
+
+# 灵光API配置 (建议在网页左侧输入)
+st.title("🎬 AI 视频分镜专家 (商业演示版)")
+
+with st.sidebar:
+    st.header("🔑 收益配置")
+    my_key = st.text_input("灵光API Key", type="password")
+    # 模拟广告开关
+    ad_unlocked = st.toggle("模拟用户已看广告", value=False)
+
+uploaded_video = st.file_uploader("上传剪辑视频", type=["mp4", "mov"])
+
+if uploaded_video and my_key:
+    if not ad_unlocked:
+        st.warning("📺 这是一个演示：在真实小程序中，用户需看完 30 秒广告才能触发下方的 AI 分析。")
+        if st.button("点击模拟观看广告"):
+            st.balloons()
+            st.info("广告已看完，AI 功能解锁！")
+    else:
+        # 这里放置你之前的抽帧逻辑
+        st.success("✅ AI 正在为您拆解镜头并生成提示词...")
+        # 实际调用灵光API的代码逻辑...
