@@ -1,6 +1,6 @@
 streamlit
-opencv-python-headLess
+opencv-python-headless
 Pillow
 requests
-yt-dp
+yt-dlp
 validators
